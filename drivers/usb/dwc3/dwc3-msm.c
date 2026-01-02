@@ -2218,10 +2218,6 @@ static void dwc3_msm_power_collapse_por(struct dwc3_msm *mdwc)
 	/* Re-configure event buffers */
 	dwc3_event_buffers_setup(dwc);
 
-	/* Get initial P3 status and enable IN_P3 event */
-	val = dwc3_msm_read_reg_field(mdwc->base,
-		DWC3_GDBGLTSSM, DWC3_GDBGLTSSM_LINKSTATE_MASK);
-	atomic_set(&mdwc->in_p3, val == DWC3_LINK_STATE_U3);
 	dwc3_msm_write_reg_field(mdwc->base, PWR_EVNT_IRQ_MASK_REG,
 				PWR_EVNT_POWERDOWN_IN_P3_MASK, 1);
 
