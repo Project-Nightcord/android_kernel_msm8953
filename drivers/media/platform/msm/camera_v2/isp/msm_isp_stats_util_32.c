@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2013-2018, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,7 +29,7 @@ static int msm_isp_stats_cfg_ping_pong_address(struct vfe_device *vfe_dev,
 
 	if (stats_idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type ||
 		stats_idx >= MSM_ISP_STATS_MAX) {
-		pr_err("%s Invalid stats index %d\n", __func__, stats_idx);
+		pr_err("%s Invalid stats index %d", __func__, stats_idx);
 		return -EINVAL;
 	}
 
@@ -40,8 +39,7 @@ static int msm_isp_stats_cfg_ping_pong_address(struct vfe_device *vfe_dev,
 
 	pingpong_bit = (~(pingpong_status >> stats_pingpong_offset) & 0x1);
 	rc = vfe_dev->buf_mgr->ops->get_buf(vfe_dev->buf_mgr,
-			vfe_dev->pdev->id, bufq_handle,
-			MSM_ISP_INVALID_BUF_INDEX, &buf);
+			vfe_dev->pdev->id, bufq_handle, &buf);
 	if (rc < 0) {
 		vfe_dev->error_info.stats_framedrop_count[stats_idx]++;
 		return rc;
@@ -83,10 +81,10 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 	uint32_t stats_comp_mask = 0, stats_irq_mask = 0;
 	uint32_t num_stats_comp_mask =
 		vfe_dev->hw_info->stats_hw_info->num_stats_comp_mask;
-	stats_comp_mask = vfe_dev->hw_info->vfe_ops.stats_ops.get_comp_mask(
-				irq_status0, irq_status1);
-	stats_irq_mask = vfe_dev->hw_info->vfe_ops.stats_ops.get_wm_mask(
-				irq_status0, irq_status1);
+	stats_comp_mask = vfe_dev->hw_info->vfe_ops.stats_ops.
+		get_comp_mask(irq_status0, irq_status1);
+	stats_irq_mask = vfe_dev->hw_info->vfe_ops.stats_ops.
+		get_wm_mask(irq_status0, irq_status1);
 	if (!(stats_comp_mask || stats_irq_mask))
 		return;
 	ISP_DBG("%s: status: 0x%x\n", __func__, irq_status0);
@@ -120,9 +118,8 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 		buf_event.frame_id =
 			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
 		buf_event.input_intf = VFE_PIX_0;
-		pingpong_status =
-		vfe_dev->hw_info->vfe_ops.stats_ops.get_pingpong_status(
-			vfe_dev);
+		pingpong_status = vfe_dev->hw_info->
+			vfe_ops.stats_ops.get_pingpong_status(vfe_dev);
 
 		for (i = 0; i < vfe_dev->hw_info->stats_hw_info->num_stats_type;
 			i++) {
@@ -138,8 +135,8 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 				rc = vfe_dev->buf_mgr->ops->buf_divert(
 					vfe_dev->buf_mgr, done_buf->bufq_handle,
 					done_buf->buf_idx, &ts->buf_time,
-					vfe_dev->axi_data.src_info[
-					VFE_PIX_0].frame_id);
+					vfe_dev->axi_data.
+					src_info[VFE_PIX_0].frame_id);
 				if (rc != 0)
 					continue;
 
@@ -189,11 +186,11 @@ int msm_isp_stats_create_stream(struct vfe_device *vfe_dev,
 		return rc;
 	}
 
-	stats_idx = vfe_dev->hw_info->vfe_ops.stats_ops.get_stats_idx(
-			stream_req_cmd->stats_type);
+	stats_idx = vfe_dev->hw_info->vfe_ops.stats_ops.
+		get_stats_idx(stream_req_cmd->stats_type);
 
 	if (stats_idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-		pr_err("%s Invalid stats index %d\n", __func__, stats_idx);
+		pr_err("%s Invalid stats index %d", __func__, stats_idx);
 		return -EINVAL;
 	}
 
@@ -252,7 +249,7 @@ int msm_isp_request_stats_stream(struct vfe_device *vfe_dev, void *arg)
 	stats_idx = STATS_IDX(stream_req_cmd->stream_handle);
 
 	if (stats_idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-		pr_err("%s Invalid stats index %d\n", __func__, stats_idx);
+		pr_err("%s Invalid stats index %d", __func__, stats_idx);
 		return -EINVAL;
 	}
 
@@ -268,8 +265,8 @@ int msm_isp_request_stats_stream(struct vfe_device *vfe_dev, void *arg)
 	stream_info->framedrop_period = framedrop_period - 1;
 
 	if (!stream_info->composite_flag)
-		vfe_dev->hw_info->vfe_ops.stats_ops.cfg_wm_irq_mask(vfe_dev,
-				stream_info);
+		vfe_dev->hw_info->vfe_ops.stats_ops.
+			cfg_wm_irq_mask(vfe_dev, stream_info);
 
 	if (stream_info->init_stats_frame_drop == 0)
 		vfe_dev->hw_info->vfe_ops.stats_ops.cfg_wm_reg(vfe_dev,
@@ -288,7 +285,7 @@ int msm_isp_release_stats_stream(struct vfe_device *vfe_dev, void *arg)
 	struct msm_vfe_stats_stream *stream_info = NULL;
 
 	if (stats_idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-		pr_err("%s Invalid stats index %d\n", __func__, stats_idx);
+		pr_err("%s Invalid stats index %d", __func__, stats_idx);
 		return -EINVAL;
 	}
 
@@ -305,8 +302,8 @@ int msm_isp_release_stats_stream(struct vfe_device *vfe_dev, void *arg)
 	}
 
 	if (!stream_info->composite_flag)
-		vfe_dev->hw_info->vfe_ops.stats_ops.clear_wm_irq_mask(vfe_dev,
-						stream_info);
+		vfe_dev->hw_info->vfe_ops.stats_ops.
+			clear_wm_irq_mask(vfe_dev, stream_info);
 
 	vfe_dev->hw_info->vfe_ops.stats_ops.clear_wm_reg(vfe_dev, stream_info);
 	memset(stream_info, 0, sizeof(struct msm_vfe_stats_stream));
@@ -450,7 +447,7 @@ static int msm_isp_stats_update_cgc_override(struct vfe_device *vfe_dev,
 		idx = STATS_IDX(stream_cfg_cmd->stream_handle[i]);
 
 		if (idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-			pr_err("%s Invalid stats index %d\n", __func__, idx);
+			pr_err("%s Invalid stats index %d", __func__, idx);
 			return -EINVAL;
 		}
 		stats_mask |= 1 << idx;
@@ -489,7 +486,7 @@ static int msm_isp_start_stats_stream(struct vfe_device *vfe_dev,
 		idx = STATS_IDX(stream_cfg_cmd->stream_handle[i]);
 
 		if (idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-			pr_err("%s Invalid stats index %d\n", __func__, idx);
+			pr_err("%s Invalid stats index %d", __func__, idx);
 			return -EINVAL;
 		}
 
@@ -565,7 +562,7 @@ static int msm_isp_stop_stats_stream(struct vfe_device *vfe_dev,
 		idx = STATS_IDX(stream_cfg_cmd->stream_handle[i]);
 
 		if (idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-			pr_err("%s Invalid stats index %d\n", __func__, idx);
+			pr_err("%s Invalid stats index %d", __func__, idx);
 			return -EINVAL;
 		}
 
@@ -617,7 +614,7 @@ static int msm_isp_stop_stats_stream(struct vfe_device *vfe_dev,
 		idx = STATS_IDX(stream_cfg_cmd->stream_handle[i]);
 
 		if (idx >= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-			pr_err("%s Invalid stats index %d\n", __func__, idx);
+			pr_err("%s Invalid stats index %d", __func__, idx);
 			return -EINVAL;
 		}
 
@@ -668,7 +665,7 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 		/*check array reference bounds*/
 		if (STATS_IDX(update_info->stream_handle)
 			> vfe_dev->hw_info->stats_hw_info->num_stats_type) {
-			pr_err("%s: stats idx %d out of bound!\n", __func__,
+			pr_err("%s: stats idx %d out of bound!", __func__,
 				STATS_IDX(update_info->stream_handle));
 			return -EINVAL;
 		}

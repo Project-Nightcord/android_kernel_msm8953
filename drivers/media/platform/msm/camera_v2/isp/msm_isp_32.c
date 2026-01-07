@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2013-2018, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,6 +18,7 @@
 #include <linux/debugfs.h>
 #include <linux/videodev2.h>
 #include <linux/of_device.h>
+#include <linux/qcom_iommu.h>
 #include <linux/sched_clock.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
@@ -54,6 +54,8 @@ static const struct platform_device_id msm_vfe_dev_id[] = {
 static char stat_line[OVERFLOW_LENGTH];
 
 static struct msm_isp_buf_mgr vfe_buf_mgr;
+struct msm_isp_statistics stats;
+struct msm_isp_ub_info ub_info;
 static int msm_isp_enable_debugfs(struct vfe_device *vfe_dev,
 				  struct msm_isp_bw_req_info *isp_req_hist);
 static char *stats_str[MAX_OVERFLOW_COUNTERS] = {
@@ -101,9 +103,14 @@ static int msm_isp_bw_request_history_idx;
 static char bw_request_history_buff[MAX_BW_HISTORY_BUFF_LEN];
 static char ub_info_buffer[MAX_UB_INFO_BUFF_LEN];
 static spinlock_t req_history_lock;
+static int vfe_debugfs_statistics_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
 
-static ssize_t vfe_debugfs_statistics_read(struct file *t_file,
-	char __user *t_char, size_t t_size_t, loff_t *t_loff_t)
+static ssize_t vfe_debugfs_statistics_read(struct file *t_file, char *t_char,
+	size_t t_size_t, loff_t *t_loff_t)
 {
 	int i;
 	uint64_t *ptr;
@@ -127,7 +134,7 @@ static ssize_t vfe_debugfs_statistics_read(struct file *t_file,
 }
 
 static ssize_t vfe_debugfs_statistics_write(struct file *t_file,
-	const char __user *t_char, size_t t_size_t, loff_t *t_loff_t)
+	const char *t_char, size_t t_size_t, loff_t *t_loff_t)
 {
 	struct vfe_device *vfe_dev = (struct vfe_device *)
 		t_file->private_data;
@@ -138,7 +145,13 @@ static ssize_t vfe_debugfs_statistics_write(struct file *t_file,
 	return sizeof(struct msm_isp_statistics);
 }
 
-static ssize_t bw_history_read(struct file *t_file, char __user *t_char,
+static int bw_history_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t bw_history_read(struct file *t_file, char *t_char,
 	size_t t_size_t, loff_t *t_loff_t)
 {
 	int i;
@@ -183,7 +196,7 @@ static ssize_t bw_history_read(struct file *t_file, char __user *t_char,
 }
 
 static ssize_t bw_history_write(struct file *t_file,
-	const char __user *t_char, size_t t_size_t, loff_t *t_loff_t)
+	const char *t_char, size_t t_size_t, loff_t *t_loff_t)
 {
 	struct msm_isp_bw_req_info *isp_req_hist =
 		(struct msm_isp_bw_req_info *) t_file->private_data;
@@ -193,7 +206,13 @@ static ssize_t bw_history_write(struct file *t_file,
 	return sizeof(msm_isp_bw_request_history);
 }
 
-static ssize_t ub_info_read(struct file *t_file, char __user *t_char,
+static int ub_info_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t ub_info_read(struct file *t_file, char *t_char,
 	size_t t_size_t, loff_t *t_loff_t)
 {
 	int i;
@@ -224,7 +243,7 @@ static ssize_t ub_info_read(struct file *t_file, char __user *t_char,
 }
 
 static ssize_t ub_info_write(struct file *t_file,
-	const char __user *t_char, size_t t_size_t, loff_t *t_loff_t)
+	const char *t_char, size_t t_size_t, loff_t *t_loff_t)
 {
 	struct vfe_device *vfe_dev =
 		(struct vfe_device *) t_file->private_data;
@@ -236,19 +255,19 @@ static ssize_t ub_info_write(struct file *t_file,
 }
 
 static const struct file_operations vfe_debugfs_error = {
-	.open = simple_open,
+	.open = vfe_debugfs_statistics_open,
 	.read = vfe_debugfs_statistics_read,
 	.write = vfe_debugfs_statistics_write,
 };
 
 static const struct file_operations bw_history_ops = {
-	.open = simple_open,
+	.open = bw_history_open,
 	.read = bw_history_read,
 	.write = bw_history_write,
 };
 
 static const struct file_operations ub_info_ops = {
-	.open = simple_open
+	.open = ub_info_open,
 	.read = ub_info_read,
 	.write = ub_info_write,
 };
@@ -263,15 +282,15 @@ static int msm_isp_enable_debugfs(struct vfe_device *vfe_dev,
 	debugfs_base = debugfs_create_dir(dirname, NULL);
 	if (!debugfs_base)
 		return -ENOMEM;
-	if (!debugfs_create_file("stats", 0644, debugfs_base,
+	if (!debugfs_create_file("stats", S_IRUGO | S_IWUSR, debugfs_base,
 		vfe_dev, &vfe_debugfs_error))
 		return -ENOMEM;
 
-	if (!debugfs_create_file("bw_req_history", 0644,
+	if (!debugfs_create_file("bw_req_history", S_IRUGO | S_IWUSR,
 		debugfs_base, isp_req_hist, &bw_history_ops))
 		return -ENOMEM;
 
-	if (!debugfs_create_file("ub_info", 0644,
+	if (!debugfs_create_file("ub_info", S_IRUGO | S_IWUSR,
 		debugfs_base, vfe_dev, &ub_info_ops))
 		return -ENOMEM;
 
@@ -296,15 +315,12 @@ void msm_isp_update_req_history(uint32_t client, uint64_t ab,
 		ib;
 
 	for (i = 0; i < MAX_ISP_CLIENT; i++) {
-		msm_isp_bw_request_history[
-			msm_isp_bw_request_history_idx].client_info[i].active =
-				client_info[i].active;
-		msm_isp_bw_request_history[
-			msm_isp_bw_request_history_idx].client_info[i].ab =
-				client_info[i].ab;
-		msm_isp_bw_request_history[
-			msm_isp_bw_request_history_idx].client_info[i].ib =
-				client_info[i].ib;
+		msm_isp_bw_request_history[msm_isp_bw_request_history_idx].
+			client_info[i].active = client_info[i].active;
+		msm_isp_bw_request_history[msm_isp_bw_request_history_idx].
+			client_info[i].ab = client_info[i].ab;
+		msm_isp_bw_request_history[msm_isp_bw_request_history_idx].
+			client_info[i].ib = client_info[i].ib;
 	}
 
 	msm_isp_bw_request_history_idx = (msm_isp_bw_request_history_idx + 1)
@@ -408,6 +424,17 @@ static int vfe_probe(struct platform_device *pdev)
 	const struct of_device_id *match_dev;
 	int rc = 0;
 
+	struct msm_iova_partition vfe_partition = {
+		.start = SZ_128K,
+		.size = SZ_2G - SZ_128K,
+	};
+	struct msm_iova_layout vfe_layout = {
+		.partitions = &vfe_partition,
+		.npartitions = 1,
+		.client_name = "vfe",
+		.domain_flags = 0,
+	};
+
 	vfe_dev = kzalloc(sizeof(struct vfe_device), GFP_KERNEL);
 	if (!vfe_dev) {
 		rc = -ENOMEM;
@@ -474,8 +501,9 @@ static int vfe_probe(struct platform_device *pdev)
 	spin_lock_init(&vfe_dev->tasklet_lock);
 	spin_lock_init(&vfe_dev->shared_data_lock);
 	spin_lock_init(&req_history_lock);
-	media_entity_pads_init(&vfe_dev->subdev.sd.entity, 0, NULL);
-	vfe_dev->subdev.sd.entity.function = MSM_CAMERA_SUBDEV_VFE;
+	media_entity_init(&vfe_dev->subdev.sd.entity, 0, NULL, 0);
+	vfe_dev->subdev.sd.entity.type = MEDIA_ENT_T_V4L2_SUBDEV;
+	vfe_dev->subdev.sd.entity.group_id = MSM_CAMERA_SUBDEV_VFE;
 	vfe_dev->subdev.sd.entity.name = pdev->name;
 	vfe_dev->subdev.close_seq = MSM_SD_CLOSE_1ST_CATEGORY | 0x2;
 	rc = msm_sd_register(&vfe_dev->subdev);
@@ -495,14 +523,36 @@ static int vfe_probe(struct platform_device *pdev)
 	v4l2_subdev_notify(&vfe_dev->subdev.sd,
 		MSM_SD_NOTIFY_REQ_CB, &vfe_vb2_ops);
 	rc = msm_isp_create_isp_buf_mgr(vfe_dev->buf_mgr,
-		&vfe_vb2_ops, &pdev->dev,
-		vfe_dev->hw_info->axi_hw_info->scratch_buf_range);
+		&vfe_vb2_ops, &vfe_layout);
 	if (rc < 0) {
 		pr_err("%s: Unable to create buffer manager\n", __func__);
 		rc = -EINVAL;
 		goto probe_fail3;
 	}
+	/* create secure context banks*/
+	if (vfe_dev->hw_info->num_iommu_secure_ctx) {
+		/*secure vfe layout*/
+		struct msm_iova_layout vfe_secure_layout = {
+			.partitions = &vfe_partition,
+			.npartitions = 1,
+			.client_name = "vfe_secure",
+			.domain_flags = 0,
+			.is_secure = MSM_IOMMU_DOMAIN_SECURE,
+		};
+		rc = msm_isp_create_secure_domain(vfe_dev->buf_mgr,
+			&vfe_secure_layout);
+		if (rc < 0) {
+			pr_err("%s: fail to create secure domain\n", __func__);
+			msm_sd_unregister(&vfe_dev->subdev);
+			rc = -EINVAL;
+			goto probe_fail3;
+		}
+	}
 	msm_isp_enable_debugfs(vfe_dev, msm_isp_bw_request_history);
+	vfe_dev->buf_mgr->ops->register_ctx(vfe_dev->buf_mgr,
+		&vfe_dev->iommu_ctx[0], &vfe_dev->iommu_secure_ctx[0],
+		vfe_dev->hw_info->num_iommu_ctx,
+		vfe_dev->hw_info->num_iommu_secure_ctx);
 
 	vfe_dev->buf_mgr->init_done = 1;
 	vfe_dev->vfe_open_cnt = 0;
@@ -522,6 +572,7 @@ static struct platform_driver vfe_driver = {
 	.probe = vfe_probe,
 	.driver = {
 		.name = "msm_vfe",
+		.owner = THIS_MODULE,
 		.of_match_table = msm_vfe_dt_match,
 	},
 	.id_table = msm_vfe_dev_id,

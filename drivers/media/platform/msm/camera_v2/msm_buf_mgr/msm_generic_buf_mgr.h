@@ -1,5 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2013-2016, 2018, 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,7 +26,7 @@
 
 struct msm_get_bufs {
 	struct list_head entry;
-	struct vb2_v4l2_buffer *vb2_v4l2_buf;
+	struct vb2_buffer *vb2_buf;
 	uint32_t session_id;
 	uint32_t stream_id;
 	uint32_t index;
@@ -36,6 +35,7 @@ struct msm_get_bufs {
 struct msm_buf_mngr_device {
 	struct list_head buf_qhead;
 	spinlock_t buf_q_spinlock;
+	struct ion_client *ion_client;
 	struct msm_sd_subdev subdev;
 	struct msm_sd_req_vb2_q vb2_ops;
 	struct list_head cont_qhead;
@@ -50,7 +50,7 @@ struct msm_buf_mngr_user_buf_cont_info {
 	int32_t main_fd;
 	struct msm_camera_user_buf_cont_t *paddr;
 	uint32_t cnt;
-	struct dma_buf *dmabuf;
+	struct ion_handle *ion_handle;
 };
 
 /* kernel space functions*/

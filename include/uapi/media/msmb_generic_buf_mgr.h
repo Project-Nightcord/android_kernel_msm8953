@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 #ifndef __UAPI_MEDIA_MSMB_GENERIC_BUF_MGR_H__
 #define __UAPI_MEDIA_MSMB_GENERIC_BUF_MGR_H__
 
@@ -63,6 +62,5 @@ struct msm_buf_mngr_main_cont_info {
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 40, \
 	struct msm_camera_private_ioctl_arg)
 
-#define VIDIOC_MSM_BUF_MNGR_BUF_ERROR \
-	_IOWR('V', BASE_VIDIOC_PRIVATE + 41, struct msm_buf_mngr_info)
 #endif
+

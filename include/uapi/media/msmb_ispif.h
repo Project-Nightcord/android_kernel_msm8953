@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 #ifndef UAPI_MSMB_ISPIF_H
 #define UAPI_MSMB_ISPIF_H
 
@@ -29,7 +28,7 @@ enum msm_ispif_intftype {
 };
 #define MAX_PARAM_ENTRIES (INTF_MAX * 2)
 #define MAX_CID_CH	8
-#define MAX_CID_CH_PARAM_ENTRY	3
+#define MAX_CID_CH_v2	3
 
 #define PIX0_MASK (1 << PIX0)
 #define PIX1_MASK (1 << PIX1)
@@ -95,7 +94,7 @@ struct msm_ispif_params_entry {
 	enum msm_ispif_vfe_intf vfe_intf;
 	enum msm_ispif_intftype intftype;
 	int num_cids;
-	enum msm_ispif_cid cids[MAX_CID_CH_PARAM_ENTRY];
+	enum msm_ispif_cid cids[MAX_CID_CH_v2];
 	enum msm_ispif_csid csid;
 	int crop_enable;
 	uint16_t crop_start_pixel;
@@ -103,7 +102,7 @@ struct msm_ispif_params_entry {
 };
 
 struct msm_ispif_right_param_entry {
-	enum msm_ispif_cid cids[MAX_CID_CH_PARAM_ENTRY];
+	enum msm_ispif_cid cids[MAX_CID_CH_v2];
 	enum msm_ispif_csid csid;
 };
 
@@ -177,3 +176,4 @@ struct ispif_cfg_data_ext {
 	_IOWR('V', BASE_VIDIOC_PRIVATE+1, struct ispif_cfg_data_ext)
 
 #endif
+
