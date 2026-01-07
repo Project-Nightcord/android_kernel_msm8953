@@ -568,10 +568,10 @@ void msm_vfe47_read_irq_status_and_clear(struct vfe_device *vfe_dev,
 
 		/* check if status register is cleared if not clear again*/
 	while (*irq_status0 &&
-		(*irq_status0 & legacy_m_msm_camera_io_r(vfe_dev->vfe_base + 0x6C)) &&
+		(*irq_status0 & msm_camera_io_r(vfe_dev->vfe_base + 0x6C)) &&
 		(count < MAX_RECOVERY_THRESHOLD)) {
-		legacy_m_msm_camera_io_w(*irq_status0, vfe_dev->vfe_base + 0x64);
-		legacy_m_msm_camera_io_w_mb(1, vfe_dev->vfe_base + 0x58);
+		msm_camera_io_w(*irq_status0, vfe_dev->vfe_base + 0x64);
+		msm_camera_io_w_mb(1, vfe_dev->vfe_base + 0x58);
 		count++;
 	}
 
